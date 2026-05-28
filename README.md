@@ -62,5 +62,5 @@ It includes MoSTScenario, which is licensed under the GNU GPL.
 | --sumo-mode | "gui" | string | Run mode: "cli" or "gui" |
 | --sim-config | "simconfig.json" | string | Simulation configuration file |
 | --sumo-config | "./MoSTScenario/scenario/most.sumocfg" | string | SUMO configuration file |
-| --debug | False | boolean | Enable debug mode |
+| --debug | False | boolean | Enable debug mode to show parking area locations |
 | --debug-vehicle | None | string / null | Vehicle ID for debug output filtering |
