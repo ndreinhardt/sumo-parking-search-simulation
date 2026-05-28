@@ -1,5 +1,5 @@
 ## About this Project
-This repository contains a simulation-based study on urban parking search behavior conducted as part of a student research project. It analyzes how parameters such as parking duration, occupancy, and search radius affect search time, travel distance, and overall traffic dynamics.
+This repository contains a simulation-based evaluation of urban parking search behavior conducted as part of a student research project. It analyzes how parameters such as parking duration, occupancy, and search radius affect search time, travel distance, and overall traffic dynamics.
 
 ## Licenses
 This project is licensed under BSD 2-Clause, except for third-party components.
