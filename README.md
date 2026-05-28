@@ -2,8 +2,8 @@
 This repository contains a simulation-based evaluation of urban parking search behavior conducted as part of a student research project. It analyzes how parameters such as parking duration, occupancy, and search radius affect search time, travel distance, and overall traffic dynamics.
 
 ## Licenses
-This project is licensed under BSD 2-Clause, except for third-party components.
-It includes MoSTScenario, which is licensed under the GNU GPL.
+This project is licensed under the BSD 2-Clause License, except for third-party components. It includes the MoSTScenario by Lara Codeca, which is licensed under the GNU General Public License (GPL).
+
 
 ## Installation Guide (Linux)
 
