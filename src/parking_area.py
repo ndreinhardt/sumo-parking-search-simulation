@@ -42,6 +42,7 @@ class ParkingArea():
     def reservate_parking_slot(self, release_timestamp):
         self.occupacity +=1
         self.release_timestamps.append(release_timestamp)
+        self.update_poi_image()
         return True
     
     def get_release_timestamps(self):
@@ -55,14 +56,44 @@ class ParkingArea():
 
     def add_poi(self):
         if self.type == ParkingAreaType.OFF_STREET:
-            imgFile=os.path.abspath("./src/img/off_street_parking.png")
-            size = 20
+            imgFile=os.path.abspath("./src/img/off_street_0.png")
+            size = 10
             layer = 11
         elif self.type == ParkingAreaType.ON_STREET:
-            imgFile=os.path.abspath("./src/img/on_street_parking.png")
-            size = 15
+            imgFile=os.path.abspath("./src/img/on_street_0.png")
+            size = 10
             layer = 10
 
+        x_offset = 0
+        if self.edge[0] == "-":
+            x_offset = 10
+
         poi_id = "pid" + str(self.area_id)
-        traci.poi.add(color=(100,255,255,255), x=self.target_position[0], y=self.target_position[1], poiID=poi_id, 
+        traci.poi.add(color=(100,255,255,255), x=self.target_position[0]+x_offset, y=self.target_position[1], poiID=poi_id, 
                       poiType="parking", width=size, height=size, layer=layer, imgFile=imgFile)
+        self.update_poi_image()
+
+
+    def update_poi_image(self):
+
+        amount = self.get_available()
+
+        if self.type == ParkingAreaType.OFF_STREET:
+            img_prefix = "off_street_"
+        elif self.type == ParkingAreaType.ON_STREET:
+            img_prefix = "on_street_"
+
+        if amount > 50:
+            imgFile = os.path.abspath(f"./src/img/{img_prefix}50_plus.png")
+        elif amount > 20:
+            imgFile = os.path.abspath(f"./src/img/{img_prefix}20_plus.png")
+        elif amount > 10:
+            imgFile = os.path.abspath(f"./src/img/{img_prefix}10_plus.png")
+        elif amount > 5:
+            imgFile = os.path.abspath(f"./src/img/{img_prefix}5_plus.png")
+        else:
+            imgFile = os.path.abspath(f"./src/img/{img_prefix}{amount}.png")
+
+        poi_id = "pid" + str(self.area_id)
+
+        traci.poi.setImageFile(imageFile=imgFile, poiID=poi_id)

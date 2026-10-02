@@ -173,3 +173,5 @@ class ParkingAreaManager():
             for remove in delete_timestamps:
                 area.remove_release_timestamp(remove)
             global_releases += area_releases
+
+            area.update_poi_image()
