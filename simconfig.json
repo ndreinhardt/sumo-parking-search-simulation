@@ -1,7 +1,7 @@
 {
   "parking_areas": {
     "parking_area_file_path" : "parking_areas.json",
-    "initial_occupacity_percentage": 10,
+    "initial_occupacity_percentage": 90,
     "on_street_capacity_per_100_m": 7,
     "parking_costs_euro_per_hour": {
         "on_street": 2.0,
@@ -9,17 +9,18 @@
     }
   },
   "simulation": {
-    "start": 14400,
+    "start": 21600,
     "end": 50400,
     "name": "Basissimulation",
     "description": "Basissimulation",
     "exporter_update_interval_in_seconds": 100
   },
   "parking_search": {
-    "routing_lookahead_depth": 10,
+    "park_in_delay_in_seconds": 20,
+    "routing_lookahead_depth": 1,
     "observation_window_size": 20,
-    "max_search_radius_in_meters": 1000,
-    "parking_duration_in_min": 300,
+    "max_search_radius_in_meters": 400,
+    "parking_duration_in_min": 60,
     "city_center": {
       "pos_x_in_meters": 5332,
       "pos_y_in_meters": 2081,

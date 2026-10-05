@@ -42,7 +42,8 @@ class Vehicle():
         self.target_position = helper.get_middle_of_edge_position(edge=target_edge)
         self.timestamps = {TimeStamps.START_OF_TRAVEL: None,
                   TimeStamps.START_OF_CRUISING: None,
-                  TimeStamps.END_OF_CRUISING: None}
+                  TimeStamps.END_OF_CRUISING: None,
+                  TimeStamps.PARK_IN_DONE: None}
     
 
     def get_state(self):
@@ -138,8 +139,12 @@ class Vehicle():
             total_track_length += edge_length
         return(total_track_length)
 
+    def get_park_in_done_timestamp(self):
+        return self.timestamps[TimeStamps.PARK_IN_DONE]
     
 
+    def set_park_in_done_timestamp(self, timestamp):
+        self.timestamps[TimeStamps.PARK_IN_DONE] = timestamp
 
     def set_state(self, state: VehicleState):
         self.state = state

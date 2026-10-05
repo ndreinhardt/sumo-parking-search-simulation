@@ -27,22 +27,26 @@ class SumoStepListener(traci.StepListener):
         self.debug_vehicle = debug_vehicle
         self.cost_calculator = ParkingAreaCostCalculator(simconfig=self.simconfig)
 
+    # do a step in simulation
     def step(self, t):
         now = traci.simulation.getTime()
 
+        # iterate trough all persons
         for person in traci.person.getIDList():
+            # get  vehicle id
             vid = traci.person.getVehicle(person)
-
-            if vid == "":
+            # ignore persons who are not in a vehicle
+            if vid == "":                                           
                 continue
 
+            # get route informations
             route = traci.vehicle.getRoute(vid)
             route_index = traci.vehicle.getRouteIndex(vid)
-            
-            vehicle = self.vehicle_manager.get_vehicle_by_id(vid)
 
-            # get vehicle position
+            # get vehicle and position
+            vehicle = self.vehicle_manager.get_vehicle_by_id(vid)
             current_lane = traci.vehicle.getLaneID(vid)
+            # ignore vehicles which are not on the road
             if current_lane == "":
                 continue
             current_edge = traci.lane.getEdgeID(current_lane)
@@ -58,12 +62,11 @@ class SumoStepListener(traci.StepListener):
                 if vehicle_state == VehicleState.IGNORE:
                     continue
 
-                # generate new routes
-                if route_index >= len(route)-1:
+                # generate new routes if current edge is last edge
+                if (route_index >= len(route)-1) and (vehicle_state != VehicleState.PARKING_MANEUVER):
                     self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.ROUTING)
-                    traci.vehicle.highlight(vid, (255,160,0,255))  # orange 
 
-                # set vehicles to observating           
+                # set vehicles to observating when they get inrange           
                 elif (remaining_distance <= vehicle.get_search_radius()) and (vehicle_state == VehicleState.INCOMING):
                     traci.vehicle.highlight(vid, (0,160,255,255)) # blue
                     self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.CRUISING_TO_TARGET)
@@ -71,6 +74,7 @@ class SumoStepListener(traci.StepListener):
     
             # create vehicle objects       
             else:
+                # check if vehicle target is in the city
                 vehicle_targe_edge = route[-1]
                 city_center = self.simconfig.get_city_center()
                 if helper.check_if_edge_in_city(edge=vehicle_targe_edge, city_center=city_center) and "bus" not in vid:
@@ -78,6 +82,7 @@ class SumoStepListener(traci.StepListener):
                 else:
                     new_vehicle_state = VehicleState.IGNORE
 
+                # add vehicle to python
                 self.vehicle_manager.add_vehicle(vid=vid,state=new_vehicle_state, 
                                                     target_edge=vehicle_targe_edge)
                 new_vehicle = self.vehicle_manager.get_vehicle_by_id(vid=vid)
@@ -94,30 +99,36 @@ class SumoStepListener(traci.StepListener):
             # ------------------------------------------------------------------------------------------
             vehicle_state = vehicle.get_state()
 
-            # ignore connecotr edges
+            # ignore connector edges
             if current_edge[0] == ":":
                         continue
 
-            # check edge only once
-            if not vehicle.is_on_new_edge(current_edge):
+            # check edge only once (step listener is checking edge n times) 
+            # but check same edge if vehicle is in parking maneuver
+            # thats why below if-statements are used instead of elif
+            if (not vehicle.is_on_new_edge(current_edge)) and (vehicle_state != VehicleState.PARKING_MANEUVER):
                 continue
 
+            # generate new section for cruising    
             if vehicle_state == VehicleState.ROUTING:
                 self.vehicle_manager.generate_cruising_route(vid=vid, 
                                                             current_edge=current_edge, 
                                                             current_lane=current_lane)
                 
                 self.vehicle_manager.set_vehicle_state(vid=vid,state=VehicleState.CRUISING_FOR_PARKING)      
-                traci.vehicle.highlight(vid, (100,255,0,255)) # green    
+                #traci.vehicle.highlight(vid, (100,255,0,255)) # green    
 
+            # check parking areas
             if (vehicle_state == VehicleState.CRUISING_TO_TARGET) or (vehicle_state == VehicleState.CRUISING_FOR_PARKING):
                 available = self.parking_area_manager.check_edge_for_parking_areas(edge=current_edge)
 
                 # no parking areas on current edge or outside radius
                 if (len(available) == 0) or (remaining_distance > vehicle.get_search_radius()):
+                    # TODO: ovserved edge removen, ist outside radius
                     new_observed_edge = ObservedEdge(edge=current_edge, available=0)
                     vehicle.add_observed_edge(new_observed_edge)
-                
+
+                # check / analyse all parking opportunities
                 for area in available:
                     price_observations= vehicle.get_price_observations()
                     distance_observations = vehicle.get_distance_observations()
@@ -138,25 +149,18 @@ class SumoStepListener(traci.StepListener):
                     
                     # take parking area
                     if choose_area:
-
                         # vehicle debugging
                         if self.debug_vehicle != None and self.debug_vehicle == vid:
                             print(f"vid {vid} takes parking area {area.get_area_id()}")
 
-                        self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.PARKING)
-                        release_timestamp = now + self.simconfig.get_parking_duration() * 60
+                        self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.PARKING_MANEUVER)
+                        traci.vehicle.highlight(vid, (255,60,0,255))  # red 
+                        self.vehicle_manager.park_in(vid=vid, current_edge=current_edge, current_lane=current_lane)
+                        # +1 is buffer to remove vehicle before it starts driving again
+                        park_in_timestamp = now + self.simconfig.get_park_in_delay_in_seconds() + 1 
+                        vehicle.set_park_in_done_timestamp(timestamp=park_in_timestamp)
+                        release_timestamp =  park_in_timestamp + self.simconfig.get_parking_duration() * 60
                         self.parking_area_manager.park_vehicle(area_id=area.get_area_id(), release_timestamp=release_timestamp)
-                        try:
-                            traci.vehicle.remove(vehID=vid)
-                        except:
-                            print(f"DEBUG: vehicle konnte nicht removed werden (schon weg)")
-
-                        vehicle.add_timestamp(key=TimeStamps.END_OF_CRUISING, value=now)
-                        if vehicle.validate_timestamps():
-                            self.exporter.add_arrived_vehicle(cruising_time=vehicle.get_cruising_time(), remaining_distance=remaining_distance,
-                                                            travel_time=vehicle.get_travel_time(), vid=vid, cruising_time_share=vehicle.get_cruising_time_share(),
-                                                            track_length=vehicle.get_total_track_length(), 
-                                                            departure_timestamp=vehicle.get_timestamp(key=TimeStamps.START_OF_CRUISING), arrival_timestamp=now)
                         break
 
                     # dont take parking area
@@ -177,7 +181,22 @@ class SumoStepListener(traci.StepListener):
                         new_observed_edge = ObservedEdge(edge=current_edge, available=occupacity)
                         vehicle.add_observed_edge(new_observed_edge)
 
-                vehicle.update_edge_status(edge=current_edge)                   
+                vehicle.update_edge_status(edge=current_edge)  
+            
+            elif (vehicle_state == VehicleState.PARKING_MANEUVER) and (now - vehicle.get_park_in_done_timestamp() > -1):
+                try:
+                    traci.vehicle.remove(vehID=vid)
+                except:
+                    print(f"DEBUG: vehicle konnte nicht removed werden (schon weg)")
+
+                vehicle.add_timestamp(key=TimeStamps.END_OF_CRUISING, value=now)
+                if vehicle.validate_timestamps():
+                    self.exporter.add_arrived_vehicle(cruising_time=vehicle.get_cruising_time(), remaining_distance=remaining_distance,
+                                                    travel_time=vehicle.get_travel_time(), vid=vid, cruising_time_share=vehicle.get_cruising_time_share(),
+                                                    track_length=vehicle.get_total_track_length(), 
+                                                    departure_timestamp=vehicle.get_timestamp(key=TimeStamps.START_OF_CRUISING), arrival_timestamp=now)
+                break
+
 
         # clear parking areas
         if traci.simulation.getTime() % 60 == 0:

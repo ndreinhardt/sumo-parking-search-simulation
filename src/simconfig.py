@@ -22,6 +22,7 @@ class SimConfig():
 
         # load parameters from simconfig
         try:
+            # Parking Areas
             self.parking_area_file_path = config["parking_areas"]["parking_area_file_path"]
             self._check_type("parking_areas->parking_area_file_path",self.parking_area_file_path, str)
             
@@ -37,7 +38,7 @@ class SimConfig():
             self.off_street_parking_costs = config["parking_areas"]["parking_costs_euro_per_hour"]["off_street"]
             self._check_type("parking_areas->parking_costs->off_street",self.off_street_parking_costs, float)
 
-
+            # Simulation
             self.sim_start = config["simulation"]["start"]
             self._check_type("simulation->start",self.sim_start, int)
 
@@ -53,6 +54,10 @@ class SimConfig():
             self.update_interval = config["simulation"]["exporter_update_interval_in_seconds"]
             self._check_type("simulation->exporter_update_interval_in_seconds",self.update_interval, int)
 
+
+            # Parking Search
+            self.park_in_delay_in_seconds = config["parking_search"]["park_in_delay_in_seconds"]
+            self._check_type("parking_search->park_in_delay_in_seconds",self.park_in_delay_in_seconds, int)
 
             self.cost_distribution_distance_weigth = config["parking_search"]["cost_distribution"]["distance"]
             self._check_type("parking_search->coast_distribution->distance",self.cost_distribution_distance_weigth, float)
@@ -165,3 +170,6 @@ class SimConfig():
     
     def get_max_parking_price(self):
         return(max(self.on_street_parking_costs, self.off_street_parking_costs))
+
+    def get_park_in_delay_in_seconds(self):
+        return self.park_in_delay_in_seconds

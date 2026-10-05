@@ -126,7 +126,7 @@ class VehicleManager():
         stops = list(traci.vehicle.getStops(vehID=vid))
         try:
             if len(stops) >= 1:
-                traci.vehicle.replaceStop(nextStopIndex=0, edgeID=new_route[-1][0], duration=0, vehID=vid, laneIndex=new_route[-1][1][-1], pos=int(edge_length*0.9))
+                traci.vehicle.replaceStop(nextStopIndex=0, edgeID=new_route[-1][0], duration=7, vehID=vid, laneIndex=new_route[-1][1][-1], pos=int(edge_length*0.5))
             else:
                 traci.vehicle.setStop(edgeID=new_route[-1][0], duration=0, vehID=vid, laneIndex=new_route[-1][1][-1], pos=int(edge_length*0.9))
         except traci.exceptions.TraCIException as e:
@@ -134,6 +134,16 @@ class VehicleManager():
             
         # reapply route to prevent rerouting by stops
         traci.vehicle.setRoute(vehID=vid, edgeList=new_route_only_edges)
+
+
+    def park_in(self, vid, current_edge, current_lane):
+        vehicle = self.get_vehicle_by_id(vid=vid)
+        edge_length = traci.lane.getLength(laneID=current_lane)
+        print(f"Vehicle:{vehicle} - current_edge:{current_edge}")
+        duration = self.simconfig.get_park_in_delay_in_seconds() + 1
+        traci.vehicle.setRoute(vehID=vid, edgeList=[(current_edge)])
+        traci.vehicle.setStop(edgeID=current_edge,duration=duration,vehID=vid, laneIndex=current_lane[-1],pos=int(edge_length/2))
+
     
     def get_vehicle_by_id(self, vid) -> Vehicle:
         vehicle = next(
