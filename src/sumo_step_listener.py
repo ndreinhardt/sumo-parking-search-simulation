@@ -156,9 +156,7 @@ class SumoStepListener(traci.StepListener):
                         self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.PARKING_MANEUVER)
                         traci.vehicle.setColor(vid, (255,60,0,255))  # red 
                         self.vehicle_manager.park_in(vid=vid, current_edge=current_edge, current_lane=current_lane)
-                        # +1 is buffer to remove vehicle before it starts driving again
                         park_in_timestamp = now + self.simconfig.get_park_in_delay_in_seconds() + 1 
-                        vehicle.set_park_in_done_timestamp(timestamp=park_in_timestamp)
                         release_timestamp =  park_in_timestamp + self.simconfig.get_parking_duration() * 60
                         self.parking_area_manager.park_vehicle(area_id=area.get_area_id(), release_timestamp=release_timestamp)
                         break
@@ -183,19 +181,41 @@ class SumoStepListener(traci.StepListener):
 
                 vehicle.update_edge_status(edge=current_edge)  
             
-            elif (vehicle_state == VehicleState.PARKING_MANEUVER) and (now - vehicle.get_park_in_done_timestamp() > -1):
+            elif vehicle_state == VehicleState.PARKING_MANEUVER:
+                stop_state = traci.vehicle.getStopState(vehID=vid)
+
+                # vehicle still driving towards parking stop (bit 0 = stopped)
+                if not stop_state & 1:
+                    continue
+
+                # vehicle stopped, park-in maneuver takes park_in_delay seconds
+                park_in_done_timestamp = vehicle.get_park_in_done_timestamp()
+                if park_in_done_timestamp is None:
+                    park_in_done_timestamp = now + self.simconfig.get_park_in_delay_in_seconds()
+                    vehicle.set_park_in_done_timestamp(timestamp=park_in_done_timestamp)
+
+                # currently parking in
+                if now < park_in_done_timestamp:
+                    continue
+
+                # park-in done: remove vehicle before stop ends 
                 try:
                     traci.vehicle.remove(vehID=vid)
-                except:
-                    print(f"DEBUG: vehicle konnte nicht removed werden (schon weg)")
+                except traci.TraCIException:
+                    print(f"DEBUG: vehicle {vid} konnte nicht removed werden (schon weg)")
 
                 vehicle.add_timestamp(key=TimeStamps.END_OF_CRUISING, value=now)
                 if vehicle.validate_timestamps():
-                    self.exporter.add_arrived_vehicle(cruising_time=vehicle.get_cruising_time(), remaining_distance=remaining_distance,
-                                                    travel_time=vehicle.get_travel_time(), vid=vid, cruising_time_share=vehicle.get_cruising_time_share(),
-                                                    track_length=vehicle.get_total_track_length(), 
-                                                    departure_timestamp=vehicle.get_timestamp(key=TimeStamps.START_OF_CRUISING), arrival_timestamp=now)
-                break
+                    self.exporter.add_arrived_vehicle(
+                        vid=vid,
+                        cruising_time=vehicle.get_cruising_time(),
+                        cruising_time_share=vehicle.get_cruising_time_share(),
+                        remaining_distance=remaining_distance,
+                        travel_time=vehicle.get_travel_time(),
+                        track_length=vehicle.get_total_track_length(),
+                        departure_timestamp=vehicle.get_timestamp(key=TimeStamps.START_OF_CRUISING),
+                        arrival_timestamp=now,
+                    )
 
 
         # clear parking areas

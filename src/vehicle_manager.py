@@ -137,12 +137,23 @@ class VehicleManager():
 
 
     def park_in(self, vid, current_edge, current_lane):
-        vehicle = self.get_vehicle_by_id(vid=vid)
+        # generate a valid parking stop
         edge_length = traci.lane.getLength(laneID=current_lane)
-        print(f"Vehicle:{vehicle} - current_edge:{current_edge}")
         duration = self.simconfig.get_park_in_delay_in_seconds() + 1
-        traci.vehicle.setRoute(vehID=vid, edgeList=[(current_edge)])
-        traci.vehicle.setStop(edgeID=current_edge,duration=duration,vehID=vid, laneIndex=current_lane[-1],pos=int(edge_length/2))
+        #TODO: needs testing
+        while True:    
+            if edge_length < 20:
+                parking_position = int(edge_length)
+            else:
+                parking_position = max(20, int(edge_length * (random.randint(0, 100) / 100)))
+            print(f"{vid} parking position={parking_position}")
+            traci.vehicle.setRoute(vehID=vid, edgeList=[(current_edge)])
+            try:
+                traci.vehicle.setStop(edgeID=current_edge,duration=duration,vehID=vid, laneIndex=current_lane[-1],pos=parking_position)
+                break
+            except traci.exceptions.TraCIException:
+                print("parking stop to close to break")
+
 
     
     def get_vehicle_by_id(self, vid) -> Vehicle:
