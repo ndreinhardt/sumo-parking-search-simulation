@@ -154,7 +154,7 @@ class SumoStepListener(traci.StepListener):
                             print(f"vid {vid} takes parking area {area.get_area_id()}")
 
                         self.vehicle_manager.set_vehicle_state(vid=vid, state=VehicleState.PARKING_MANEUVER)
-                        traci.vehicle.highlight(vid, (255,60,0,255))  # red 
+                        traci.vehicle.setColor(vid, (255,60,0,255))  # red 
                         self.vehicle_manager.park_in(vid=vid, current_edge=current_edge, current_lane=current_lane)
                         # +1 is buffer to remove vehicle before it starts driving again
                         park_in_timestamp = now + self.simconfig.get_park_in_delay_in_seconds() + 1 
