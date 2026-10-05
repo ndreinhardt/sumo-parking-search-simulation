@@ -73,6 +73,7 @@ class SumoStepListener(traci.StepListener):
                     vehicle.add_timestamp(key=TimeStamps.START_OF_CRUISING, value=now)
     
             # create vehicle objects       
+            # TODO: add traci.stop at the end of the target edge
             else:
                 # check if vehicle target is in the city
                 vehicle_targe_edge = route[-1]
